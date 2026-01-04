@@ -4,7 +4,6 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Калькулятор Аскет</title>
-    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='10' fill='orange'/><text x='50' y='70' font-family='Arial' font-size='60' text-anchor='middle' fill='white'>🦏</text></svg>">
     <style>
         * {
             margin: 0;
@@ -59,7 +58,7 @@
             margin-top: 40px;
             line-height: 1.5;
         }
-
+        
         footer {
             padding: 20px;
             text-align: center;
@@ -68,7 +67,28 @@
             border-top: 1px solid #f0f0f0;
             background-color: #fafafa;
         }
-                
+        
+        /* Скрытое поле ввода для активации клавиатуры */
+        .hidden-input {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            opacity: 0;
+            pointer-events: none;
+        }
+        
+        /* Активация тач-событий на всем экране */
+        .touch-area {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            cursor: text;
+        }
+        
         /* Мобильная адаптация */
         @media (max-width: 768px) {
             .display {
@@ -77,6 +97,10 @@
             
             .expression {
                 font-size: 20px;
+            }
+            
+            .instructions {
+                font-size: 13px;
             }
         }
         
@@ -88,10 +112,26 @@
             .expression {
                 font-size: 18px;
             }
+            
+            .instructions {
+                font-size: 12px;
+            }
         }
     </style>
 </head>
 <body>
+    <!-- Область для тач-событий -->
+    <div class="touch-area" id="touchArea"></div>
+    
+    <!-- Скрытое поле ввода для клавиатуры -->
+    <input type="text" class="hidden-input" id="hiddenInput" 
+           inputmode="decimal" 
+           pattern="[0-9]*"
+           autocomplete="off"
+           autocorrect="off"
+           autocapitalize="off"
+           spellcheck="false">
+    
     <div class="calculator-container">
         <div class="expression" id="expression"></div>
         <div class="display" id="display">0</div>
@@ -101,9 +141,9 @@
         </div>
     </div>
     
-    <footer style="margin-top: 50px;">
-        <div>
-            &copy; Terre & Co, 2026
+    <footer>
+        <div class="copyright">
+            &copy; Terre & Co, 2025
         </div>
     </footer>
 
@@ -111,6 +151,8 @@
         // Элементы интерфейса
         const display = document.getElementById('display');
         const expression = document.getElementById('expression');
+        const hiddenInput = document.getElementById('hiddenInput');
+        const touchArea = document.getElementById('touchArea');
         
         // Переменные калькулятора
         let currentInput = '0';
@@ -118,6 +160,40 @@
         let operator = '';
         let waitingForNewInput = false;
         let expressionHistory = '';
+        
+        // Фокус на скрытом поле ввода при касании экрана
+        touchArea.addEventListener('click', () => {
+            hiddenInput.focus();
+            // Для мобильных устройств - гарантируем, что клавиатура откроется
+            hiddenInput.click();
+        });
+        
+        // Также фокус при касании области калькулятора
+        document.querySelector('.calculator-container').addEventListener('click', () => {
+            hiddenInput.focus();
+            hiddenInput.click();
+        });
+        
+        // Фокус на скрытом поле при загрузке страницы (для десктопа)
+        window.addEventListener('load', () => {
+            hiddenInput.focus();
+        });
+        
+        // Возвращаем фокус при потере (кроме мобильных устройств)
+        hiddenInput.addEventListener('blur', () => {
+            // На мобильных устройствах не возвращаем фокус автоматически,
+            // чтобы не блокировать другие элементы
+            if (!isMobileDevice()) {
+                setTimeout(() => {
+                    hiddenInput.focus();
+                }, 100);
+            }
+        });
+        
+        // Определение мобильного устройства
+        function isMobileDevice() {
+            return /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+        }
         
         // Обновление дисплея
         function updateDisplay() {
@@ -264,10 +340,8 @@
             }
         }
         
-        // Обработка нажатий клавиш
-        document.addEventListener('keydown', (event) => {
-            const { key } = event;
-            
+        // Обработка ввода с клавиатуры
+        function handleKeyInput(key) {
             // Цифры 0-9
             if (key >= '0' && key <= '9') {
                 inputDigit(key);
@@ -315,16 +389,47 @@
                 clearInput();
                 return;
             }
+        }
+        
+        // Обработка событий на скрытом поле ввода
+        hiddenInput.addEventListener('keydown', (event) => {
+            event.preventDefault();
+            handleKeyInput(event.key);
             
-            // Скобки
-            if (key === '(' || key === ')') {
-                // Не поддерживается в этой версии
-                return;
+            // Очищаем поле ввода после обработки клавиши
+            hiddenInput.value = '';
+        });
+        
+        // Также обработка глобальных событий клавиатуры для десктопа
+        document.addEventListener('keydown', (event) => {
+            // Пропускаем, если событие из скрытого поля ввода
+            if (event.target === hiddenInput) return;
+            
+            handleKeyInput(event.key);
+        });
+        
+        // Обработка ввода с виртуальной клавиатуры (для мобильных)
+        hiddenInput.addEventListener('input', (event) => {
+            const value = hiddenInput.value;
+            
+            // Обрабатываем каждый символ
+            for (let char of value) {
+                handleKeyInput(char);
             }
+            
+            // Очищаем поле ввода
+            hiddenInput.value = '';
         });
         
         // Инициализация
         updateDisplay();
+        
+        // На мобильных устройствах фокусируемся сразу
+        if (isMobileDevice()) {
+            setTimeout(() => {
+                hiddenInput.focus();
+            }, 500);
+        }
     </script>
 </body>
 </html>
