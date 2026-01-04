@@ -1,0 +1,347 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Калькулятор Аскет</title>
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='10' fill='orange'/><text x='50' y='70' font-family='Arial' font-size='60' text-anchor='middle' fill='white'>🦏</text></svg>">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Courier New', monospace;
+            background-color: #f5f5f5;
+            color: #333;
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            overflow: hidden;
+        }
+        
+        .calculator-container {
+            width: 100%;
+            max-width: 800px;
+            padding: 20px;
+            text-align: center;
+        }
+        
+        .display {
+            font-size: 4.5rem;
+            font-weight: 300;
+            margin-bottom: 40px;
+            min-height: 100px;
+            word-break: break-all;
+            overflow-wrap: break-word;
+            padding: 10px;
+            transition: color 0.2s;
+        }
+        
+        .expression {
+            font-size: 1.8rem;
+            color: #777;
+            min-height: 40px;
+            margin-bottom: 10px;
+            padding: 5px;
+        }
+        
+        .instructions {
+            margin-top: 60px;
+            font-size: 1rem;
+            color: #999;
+            line-height: 1.6;
+            max-width: 600px;
+        }
+        
+        /* Скрытые элементы интерфейса */
+        .hidden-input {
+            opacity: 0;
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            cursor: default;
+            border: none;
+            outline: none;
+            background: transparent;
+        }
+        
+        /* Эффект при нажатии клавиши */
+        .keypress-effect {
+            animation: keypress 0.2s ease;
+        }
+        
+        @keyframes keypress {
+            0% { transform: scale(1); }
+            50% { transform: scale(0.98); }
+            100% { transform: scale(1); }
+        }
+        
+        /* Темная тема */
+        @media (prefers-color-scheme: dark) {
+            body {
+                background-color: #121212;
+                color: #f0f0f0;
+            }
+            
+            .expression {
+                color: #aaa;
+            }
+            
+            .instructions {
+                color: #777;
+            }
+        }
+        
+        /* Адаптивность */
+        @media (max-width: 768px) {
+            .display {
+                font-size: 3.5rem;
+            }
+            
+            .expression {
+                font-size: 1.5rem;
+            }
+        }
+        
+        @media (max-width: 480px) {
+            .display {
+                font-size: 2.8rem;
+            }
+            
+            .expression {
+                font-size: 1.2rem;
+            }
+            
+            .instructions {
+                font-size: 0.9rem;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="calculator-container">
+        <div class="expression" id="expression"></div>
+        <div class="display" id="display">0</div>
+        
+        <!-- Скрытое поле для ввода с клавиатуры -->
+        <input type="text" class="hidden-input" id="hiddenInput" autofocus>
+    </div>
+    
+    <div class="instructions" id="instructions">
+        <p>Используйте цифровые клавиши (0-9) для ввода чисел</p>
+        <p>Операции: + (сложение), - (вычитание), * (умножение), / (деление)</p>
+        <p>Enter или = для вычисления, Escape или C для очистки, Backspace для удаления символа</p>
+        <p>Точка (.) для ввода десятичных дробей</p>
+        <p>Кликните на калькуляторе для активации ввода с клавиатуры</p>
+    </div>
+
+    <footer style="margin-top: 50px;">
+        <div>
+            &copy; Terre & Co, 2026
+        </div>
+    </footer>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const display = document.getElementById('display');
+            const expression = document.getElementById('expression');
+            const hiddenInput = document.getElementById('hiddenInput');
+            const instructions = document.getElementById('instructions');
+            
+            let currentInput = '0';
+            let previousInput = '';
+            let operator = '';
+            let expressionText = '';
+            let resetOnNextInput = false;
+            
+            // Фокус на скрытом поле ввода
+            hiddenInput.focus();
+            
+            // Обработчик ввода с клавиатуры
+            document.addEventListener('keydown', function(e) {
+                // Предотвращаем стандартное поведение только для нужных клавиш
+                const key = e.key;
+                
+                // Анимация при нажатии
+                display.classList.remove('keypress-effect');
+                void display.offsetWidth; // Триггер перерисовки для анимации
+                display.classList.add('keypress-effect');
+                
+                // Обработка цифр
+                if (key >= '0' && key <= '9') {
+                    handleNumberInput(key);
+                }
+                // Обработка операторов
+                else if (['+', '-', '*', '/'].includes(key)) {
+                    handleOperator(key);
+                }
+                // Обработка специальных клавиш
+                else if (key === 'Enter' || key === '=') {
+                    handleEquals();
+                }
+                else if (key === 'Escape' || key.toLowerCase() === 'c') {
+                    handleClear();
+                }
+                else if (key === 'Backspace') {
+                    handleBackspace();
+                }
+                else if (key === '.') {
+                    handleDecimal();
+                }
+                else {
+                    // Для остальных клавиш не блокируем стандартное поведение
+                    return;
+                }
+                
+                // Обновляем отображение
+                updateDisplay();
+                e.preventDefault();
+            });
+            
+            // Обработчик клика для активации ввода
+            document.addEventListener('click', function(e) {
+                hiddenInput.focus();
+            });
+            
+            // Функции обработки ввода
+            function handleNumberInput(num) {
+                if (resetOnNextInput) {
+                    currentInput = num;
+                    resetOnNextInput = false;
+                } else {
+                    currentInput = currentInput === '0' ? num : currentInput + num;
+                }
+                
+                // Обновляем выражение, если оператор уже выбран
+                if (operator && previousInput) {
+                    expressionText = `${previousInput} ${operator} ${currentInput}`;
+                }
+            }
+            
+            function handleOperator(op) {
+                if (operator && previousInput && !resetOnNextInput) {
+                    // Вычисляем предыдущую операцию
+                    calculate();
+                }
+                
+                operator = op;
+                previousInput = currentInput;
+                resetOnNextInput = true;
+                expressionText = `${previousInput} ${operator}`;
+            }
+            
+            function handleEquals() {
+                if (operator && previousInput) {
+                    calculate();
+                    expressionText = '';
+                    operator = '';
+                    resetOnNextInput = true;
+                }
+            }
+            
+            function handleClear() {
+                currentInput = '0';
+                previousInput = '';
+                operator = '';
+                expressionText = '';
+                resetOnNextInput = false;
+            }
+            
+            function handleBackspace() {
+                if (currentInput.length > 1) {
+                    currentInput = currentInput.slice(0, -1);
+                } else {
+                    currentInput = '0';
+                }
+                
+                // Обновляем выражение
+                if (operator && previousInput) {
+                    expressionText = `${previousInput} ${operator} ${currentInput}`;
+                }
+            }
+            
+            function handleDecimal() {
+                if (!currentInput.includes('.')) {
+                    currentInput += '.';
+                }
+                
+                // Обновляем выражение
+                if (operator && previousInput) {
+                    expressionText = `${previousInput} ${operator} ${currentInput}`;
+                }
+            }
+            
+            function calculate() {
+                const prev = parseFloat(previousInput);
+                const current = parseFloat(currentInput);
+                
+                if (isNaN(prev) || isNaN(current)) return;
+                
+                let result;
+                switch (operator) {
+                    case '+':
+                        result = prev + current;
+                        break;
+                    case '-':
+                        result = prev - current;
+                        break;
+                    case '*':
+                        result = prev * current;
+                        break;
+                    case '/':
+                        if (current === 0) {
+                            result = 'Ошибка';
+                        } else {
+                            result = prev / current;
+                        }
+                        break;
+                    default:
+                        return;
+                }
+                
+                // Ограничиваем количество знаков после запятой
+                if (typeof result === 'number') {
+                    // Округляем до 10 знаков после запятой для устранения ошибок округления
+                    result = Math.round(result * 10000000000) / 10000000000;
+                    // Убираем лишние нули после запятой
+                    result = parseFloat(result.toString());
+                }
+                
+                currentInput = result.toString();
+                previousInput = '';
+            }
+            
+            function updateDisplay() {
+                display.textContent = currentInput;
+                expression.textContent = expressionText;
+                
+                // Временно показываем инструкции при первом использовании
+                if (currentInput !== '0' || expressionText !== '') {
+                    instructions.style.opacity = '0.7';
+                    // Скрываем инструкции через 5 секунд после последнего действия
+                    clearTimeout(window.instructionsTimeout);
+                    window.instructionsTimeout = setTimeout(() => {
+                        instructions.style.opacity = '0.3';
+                    }, 5000);
+                }
+            }
+            
+            // Инициализация
+            updateDisplay();
+            
+            // Автоскрытие инструкций через 10 секунд
+            setTimeout(() => {
+                instructions.style.transition = 'opacity 1.5s ease';
+                instructions.style.opacity = '0.3';
+            }, 10000);
+        });
+    </script>
+</body>
+</html>
