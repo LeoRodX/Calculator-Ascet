@@ -4,7 +4,6 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Калькулятор Аскет</title>
-    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='10' fill='orange'/><text x='50' y='70' font-family='Arial' font-size='60' text-anchor='middle' fill='white'>🦏</text></svg>">
     <style>
         * {
             margin: 0;
@@ -137,13 +136,13 @@
         <div class="display" id="display">0</div>
         <div class="instructions">
             Используйте цифровые клавиши, +, -, *, / для вычислений<br>
-            Enter или = для результата, Escape для сброса, Backspace для удаления
+            Enter или = для результата, Escape или C для сброса, Backspace для удаления
         </div>
     </div>
     
     <footer>
         <div class="copyright">
-            &copy; Terre & Co, 2026
+            &copy; Terre & Co, 2025
         </div>
     </footer>
 
@@ -295,7 +294,7 @@
             }
         }
         
-        // Сброс калькулятора
+        // Сброс калькулятора (полный сброс как в Esc)
         function resetCalculator() {
             currentInput = '0';
             previousInput = '';
@@ -312,12 +311,6 @@
             } else {
                 currentInput = '0';
             }
-            updateDisplay();
-        }
-        
-        // Очистка текущего ввода
-        function clearInput() {
-            currentInput = '0';
             updateDisplay();
         }
         
@@ -368,15 +361,15 @@
                 return;
             }
             
-            // Backspace для удаления
-            if (key === 'Backspace') {
-                deleteLast();
+            // C для сброса (точно так же как Esc)
+            if (key === 'c' || key === 'C') {
+                resetCalculator(); // Полный сброс, как и для Escape
                 return;
             }
             
-            // C для очистки
-            if (key === 'c' || key === 'C') {
-                clearInput();
+            // Backspace для удаления
+            if (key === 'Backspace') {
+                deleteLast();
                 return;
             }
         }
